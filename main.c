@@ -26,9 +26,9 @@ typedef struct {
 CARD* createCard(int nombre, int type);
 CARD* createRandomCard(int** saturation);
 int moveCardBetweenColumn(int cardIndex, Element** sourcePIL, Element** destinationPIL);
-int moveCardFromFreeCellToFoundation(int freeCellIndex, CARD** freeCell, Element** foundationPIL);
-int moveCardFromFreeCellToColumn(int freeCellIndex, CARD** freeCell, Element** columnPIL);
-int moveCardToFreeCell(int freeCellIndex, CARD** freeCell, Element** columnPIL);
+int moveCardFromFreeCellToFoundation(CARD** freeCell, Element** foundationPIL);
+int moveCardFromFreeCellToColumn(CARD** freeCell, Element** columnPIL);
+int moveCardToFreeCell(Element** columnPIL, CARD** freeCell);
 int moveCardFromColumnToFundation(Element** columnPIL, Element** foundationPIL);
 
 /*PILE*/
@@ -65,7 +65,7 @@ CARD* createRandomCard(int** saturation){
         randomType = tv.tv_usec % 4;
         gettimeofday(&tv,NULL);
         randomNumber = tv.tv_usec % 13;
-        while(saturation[randomNumber][randomType]==4){
+        while(saturation[randomNumber][randomType]!=0){
             gettimeofday(&tv,NULL);
             randomType = tv.tv_usec % 4;
             gettimeofday(&tv,NULL);
@@ -87,63 +87,112 @@ int moveCardBetweenColumn(int cardIndex, Element** sourcePIL, Element** destinat
     
     Element* PIL = NULL;
     int i = 0;
-    for(i = 0; i<=cardIndex; i++){
-        if(!isEmpty(*sourcePIL)){
-            push(createCard(peek(*sourcePIL)->nombre, peek(*sourcePIL)->type),&PIL);
-            pop(sourcePIL);
-            continue;
+    if(isEmpty(*destinationPIL)){
+        for(i = 0; i<=cardIndex; i++){
+            if(!isEmpty(*sourcePIL)){
+                push(createCard(peek(*sourcePIL)->nombre, peek(*sourcePIL)->type),&PIL);
+                pop(sourcePIL);
+                continue;
+            }
+            printf("ERROR: empty columnPIL");
+            return 1;
         }
-        printf("ERROR: empty columnPIL");
+        for(i = 0; i<=cardIndex; i++){
+            push(createCard(peek(PIL)->nombre, peek(PIL)->type),destinationPIL);
+            pop(&PIL);
+        }
+        return 0;
+    }
+    else{
+        Element* pPIL = *sourcePIL;
+        for(i = 0; i < cardIndex ;i++){
+            pPIL = pPIL->next;
+        }
+        if(pPIL->data->nombre == (*destinationPIL)->data->nombre-1 && (pPIL->data->type + (*destinationPIL)->data->type)%2==1){
+            for(i = 0; i<=cardIndex; i++){
+                if(!isEmpty(*sourcePIL)){
+                    push(createCard(peek(*sourcePIL)->nombre, peek(*sourcePIL)->type),&PIL);
+                    pop(sourcePIL);
+                    continue;
+                }
+                printf("ERROR: empty columnPIL");
+                return 1;
+            }
+            for(i = 0; i<=cardIndex; i++){
+                push(createCard(peek(PIL)->nombre, peek(PIL)->type),destinationPIL);
+                pop(&PIL);
+            }
+            return 0;
+        }
+        printf("WARNING: Insatisfaction of conditions\n");
         return 1;
     }
-    for(i = 0; i<=cardIndex; i++){
-        push(createCard(peek(PIL)->nombre, peek(PIL)->type),destinationPIL);
-        pop(&PIL);
-    }
-    return 0;
+    return 1;
 }
 
-int moveCardFromFreeCellToFoundation(int freeCellIndex, CARD** freeCell, Element** foundationPIL){
-    if(freeCellIndex>3 || !freeCell || !foundationPIL){
+int moveCardFromFreeCellToFoundation(CARD** freeCell, Element** foundationPIL){
+    if(!freeCell || !foundationPIL){
         printf("ERROR: invalide parameter\n");
         return 1;
     }
-    if(freeCell[freeCellIndex]){
-        CARD* crd = freeCell[freeCellIndex];
-        push(createCard(crd->nombre, crd->type),foundationPIL);
-        free(crd);
-        freeCell[freeCellIndex] = NULL;
+    if(*freeCell){
+        if(!isEmpty(*foundationPIL)){
+            if((*freeCell)->nombre == (*foundationPIL)->data->nombre+1 && (*freeCell)->type == (*foundationPIL)->data->type){
+                push(createCard((*freeCell)->nombre, (*freeCell)->type),foundationPIL);
+                free((*freeCell));
+                (*freeCell) = NULL;
+                return 0;
+            }
+            printf("WARNING: Insatisfaction of conditions\n");
+            return 1;
+        }
+        if((*freeCell)->nombre == 0){
+            push(createCard((*freeCell)->nombre, (*freeCell)->type),foundationPIL);
+            free((*freeCell));
+            (*freeCell) = NULL;
+            return 0;
+        }
+        printf("WARNING: Insatisfaction of conditions\n");
+        return 1;
+    }
+    printf("WARNING: empty freeCell\n");
+    return 1;
+}
+
+int moveCardFromFreeCellToColumn(CARD** freeCell, Element** columnPIL){
+    if(!freeCell || !columnPIL){
+        printf("ERROR: invalide parameter\n");
+        return 1;
+    }
+    if((*freeCell)){
+        if(!isEmpty(*columnPIL)){
+            if((*freeCell)->nombre == (*columnPIL)->data->nombre-1 && ((*freeCell)->nombre + (*columnPIL)->data->nombre) % 2 == 1){
+                push(createCard((*freeCell)->nombre, (*freeCell)->type),columnPIL);
+                free((*freeCell));
+                (*freeCell) = NULL;
+                return 0;
+            }
+            printf("WARNING: Insatisfaction of conditions\n");
+            return 1;
+        }
+        push(createCard((*freeCell)->nombre, (*freeCell)->type),columnPIL);
+        free((*freeCell));
+        (*freeCell) = NULL;
         return 0;
     }
     printf("WARNING: empty freeCell\n");
     return 1;
 }
 
-int moveCardFromFreeCellToColumn(int freeCellIndex, CARD** freeCell, Element** columnPIL){
-    if(freeCellIndex>3 || !freeCell || !columnPIL){
+int moveCardToFreeCell(Element** columnPIL, CARD** freeCell){
+    if(!freeCell || !columnPIL){
         printf("ERROR: invalide parameter\n");
         return 1;
     }
-    if(freeCell[freeCellIndex]){
-        CARD* crd = freeCell[freeCellIndex];
-        push(createCard(crd->nombre, crd->type),columnPIL);
-        free(crd);
-        freeCell[freeCellIndex] = NULL;
-        return 0;
-    }
-    printf("WARNING: empty freeCell\n");
-    return 1;
-}
-
-int moveCardToFreeCell(int freeCellIndex, CARD** freeCell, Element** columnPIL){
-    if(freeCellIndex>3 || !freeCell || !columnPIL){
-        printf("ERROR: invalide parameter\n");
-        return 1;
-    }
-    if(!freeCell[freeCellIndex]){
+    if(!(*freeCell)){
         if(!isEmpty(*columnPIL)){
             CARD* crd  = peek(*columnPIL);
-            freeCell[freeCellIndex] = createCard(crd->nombre, crd->type);
+            (*freeCell) = createCard(crd->nombre, crd->type);
             pop(columnPIL);
             return 0;
         }
@@ -159,12 +208,26 @@ int moveCardFromColumnToFundation(Element** columnPIL, Element** foundationPIL){
         printf("ERROR: invalide parameter\n");
         return 1;
     }
-    if(!isEmpty(*columnPIL)){
-        push(createCard(peek(*columnPIL)->nombre, peek(*columnPIL)->type),foundationPIL);
+    if(isEmpty(*columnPIL)){
+        printf("ERROR: empty stack\n");
+        return 1;
+    }
+    CARD* crd = peek(*columnPIL);
+    if(isEmpty(*foundationPIL)){
+        if(crd->nombre == 0){
+            push(createCard(crd->nombre, crd->type),foundationPIL);
+            pop(columnPIL);
+            return 0;
+        }
+        printf("WARNING: Insatisfaction of conditions\n");
+        return 1;
+    }
+    if(crd->nombre == (*foundationPIL)->data->nombre+1 && crd->type == (*foundationPIL)->data->type){
+        push(createCard(crd->nombre, crd->type),foundationPIL);
         pop(columnPIL);
         return 0;
     }
-    printf("ERROR: columnPIL is empty\n");
+    printf("WARNING: Insatisfaction of conditions\n");
     return 1;
 }
 
@@ -282,48 +345,49 @@ int displayGame(GAME* game){
     printf("FREECELLS\n");
     for(i = 0 ; i < 4 ; i++){
         if(!(game->freeCell[i])){
-            printf("[ - ]\t");
+            printf("(%d)[ - ]\t",i);
             continue;
         }
         crd = *(game->freeCell[i]);
         switch(crd.type){
                 case 0 : strcpy(type, "heart");break;
-                case 1 : strcpy(type, "club");break;
-                case 2 : strcpy(type, "spade");break;
-                case 3 : strcpy(type, "diamond");break;
+                case 1 : strcpy(type, "spade");break;
+                case 2 : strcpy(type, "diamond");break;
+                case 3 : strcpy(type, "club");break;
                 default : printf("ERROR: Invalid card type\n"); exit(EXIT_FAILURE); 
         }
-        printf("[%d-%s]\t",crd.nombre, type);
+        printf("(%d)[%d-%s]\t",i, crd.nombre, type);
     }
     
     printf("\nFOUNDATIONCELLS\n");
     for(i = 0 ; i < 4 ; i++){
         if(!(game->foundationPIL[i])){
-            printf("[ - ]\t");
+            printf("(%d)[ - ]\t",i);
             continue;
         }
         crd = *(game->foundationPIL[i]->data);
         switch(crd.type){
                 case 0 : strcpy(type, "heart");break;
-                case 1 : strcpy(type, "club");break;
-                case 2 : strcpy(type, "spade");break;
-                case 3 : strcpy(type, "diamond");break;
+                case 1 : strcpy(type, "spade");break;
+                case 2 : strcpy(type, "diamond");break;
+                case 3 : strcpy(type, "club");break;
                 default : printf("ERROR: Invalid card type\n"); exit(EXIT_FAILURE); 
         }
-        printf("[%d-%s]\t",crd.nombre, type);
+        printf("(%d)[%d-%s]\t",i, crd.nombre, type);
     }
 
     printf("\n\nCOLUMNCELLS\n");
     for(i = 0 ; i < 8 ; i++){
         pPIL = &((game->columnPIL)[i]);
+        printf("(%d) ",i);
         while(!isEmpty(*pPIL)){
             crd = *peek(*pPIL);
             pPIL = &((*pPIL)->next);
             switch(crd.type){
                 case 0 : strcpy(type, "heart");break;
-                case 1 : strcpy(type, "club");break;
-                case 2 : strcpy(type, "spade");break;
-                case 3 : strcpy(type, "diamond");break;
+                case 1 : strcpy(type, "spade");break;
+                case 2 : strcpy(type, "diamond");break;
+                case 3 : strcpy(type, "club");break;
                 default : printf("ERROR: Invalid card type\n"); exit(EXIT_FAILURE); 
             }
             printf("[%d-%s]\t",crd.nombre, type);
@@ -349,25 +413,87 @@ int distroyGame(GAME** game){
 
 int main(void){
     GAME* game;
-
+    char command[10];
     gameInit(&game);
     displayGame(game);
-    moveCardBetweenColumn(2, &(game->columnPIL[0]), &(game->columnPIL[1]));
-    displayGame(game);
-    moveCardToFreeCell(0, game->freeCell, &(game->columnPIL[1]));
-    moveCardToFreeCell(0, game->freeCell, &(game->columnPIL[0])); //error
-    displayGame(game);
-    moveCardFromFreeCellToFoundation(0, game->freeCell, &(game->foundationPIL[0]));
-    displayGame(game);
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[0]));
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[0]));
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[0]));
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[0]));
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[0]));
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[0]));
-    moveCardFromColumnToFundation( &(game->columnPIL[0]),  &(game->foundationPIL[1]));
-    moveCardFromColumnToFundation( &(game->columnPIL[1]),  &(game->foundationPIL[1]));
-    displayGame(game);
+
+    while(1){
+        scanf("%s", command);
+        if(command[0] == 'C'){
+            char number[3];
+            int columnNumber = 0;
+            number[0]=command[1];
+            number[1]=command[2];
+            number[2]='\0';
+            columnNumber = atoi(number);
+            if(command[3] == 'C'){
+                int columnNumber2 = 0;
+                number[0]=command[4];
+                number[1]=command[5];
+                number[2]='\0';
+                columnNumber2 = atoi(number);
+                
+                moveCardBetweenColumn(0, &(game->columnPIL[columnNumber]), &(game->columnPIL[columnNumber2]));
+                displayGame(game);
+            }
+            else if(command[3] == 'F'){
+                if(command[4] == 'R'){
+                    int freeCellNumber = 0;
+                    number[0]=command[5];
+                    number[1]=command[6];
+                    number[2]='\0';
+                    freeCellNumber = atoi(number);
+
+                    moveCardToFreeCell(&(game->columnPIL[columnNumber]), &(game->freeCell[freeCellNumber]));
+                    displayGame(game);
+                }
+                else if(command[4] == 'O'){
+                    int foundationCellNumber = 0;
+                    number[0]=command[5];
+                    number[1]=command[6];
+                    number[2]='\0';
+                    foundationCellNumber = atoi(number);
+
+                    moveCardFromColumnToFundation(&(game->columnPIL[columnNumber]), &(game->foundationPIL[foundationCellNumber]));
+                    displayGame(game);
+                }
+            }
+        }
+        else if(command[0] == 'F'){
+            if(command[1] == 'R'){
+                char number[3];
+                int freeCellNumber = 0;
+                number[0]=command[2];
+                number[1]=command[3];
+                number[2]='\0';
+                freeCellNumber = atoi(number);
+
+                if(command[4] == 'C'){
+                    int columnNumber = 0;
+                    number[0]=command[5];
+                    number[1]=command[6];
+                    number[2]='\0';
+                    columnNumber = atoi(number);
+
+                    moveCardFromFreeCellToColumn(&(game->freeCell[freeCellNumber]), &(game->columnPIL[columnNumber]));
+                    displayGame(game);
+                }
+                else if(command[4] == 'F'){
+                    if(command[5] == 'O'){
+                        int foundationCellNumber = 0;
+                        number[0]=command[6];
+                        number[1]=command[7];
+                        number[2]='\0';
+                        foundationCellNumber = atoi(number);
+
+                        moveCardFromFreeCellToFoundation(&(game->freeCell[freeCellNumber]), &(game->foundationPIL[foundationCellNumber]));
+                        displayGame(game);
+                    }
+                }
+            }
+        }
+    }
+
     distroyGame(&game);
 
     return 0;
