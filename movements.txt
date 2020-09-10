@@ -1,0 +1,7 @@
+0=heart(red), 1=spade(black), 2=diamond(red), 3=clover(black)
+
+moveCardBetweenColumn() : diffrent type && consecuitive numbers | any number if empty : DONE
+moveCardFromFreeCellToFundation() : same type && consecuitive number && first cart is 1 if empty
+moveCardFromFreeCellToColumn() : diffrent type && consecuitive numbers | any number if empty    
+moveCardToFreeCell() : DONE
+moveCardFromColumnToFundation() : same type && consecuitive number && first cart is 1 if empty
